@@ -81,7 +81,7 @@ kubectl exec -i mysql-0 -n "$NAMESPACE" -c mysql -- \
 CREATE DATABASE IF NOT EXISTS clo835;
 
 CREATE TABLE IF NOT EXISTS clo835.students (
-  seq BIGINT UNSIGNED PRIMARY KEY,
+  seq BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   student_id VARCHAR(20) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -118,7 +118,7 @@ fi
 kubectl exec mysql-2 -n "$NAMESPACE" -c mysql -- \
   sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table \
     -e "SELECT seq, student_id, created_at FROM clo835.students ORDER BY seq;"'
-    
+
 ########################################################
 # Task 11 - Deployment Through Raw Manifests
 ########################################################
