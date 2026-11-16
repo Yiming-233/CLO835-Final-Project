@@ -1,0 +1,139 @@
+########################################################
+# Tasks 3 and 7 - MySQL Configuration and Init Script
+# Adapted from the Kubernetes replicated MySQL tutorial
+########################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: ${NAMESPACE}
+data:
+  primary.cnf: |
+    [mysqld]
+    log-bin=mysql-bin
+    binlog-format=ROW
+    log-replica-updates=ON
+    read-only=OFF
+
+  replica.cnf: |
+    [mysqld]
+    log-bin=mysql-bin
+    binlog-format=ROW
+    log-replica-updates=ON
+    read-only=ON
+
+  init-config.sh: |
+    #!/bin/bash
+    set -eu
+
+    # Generate server-id from the Pod ordinal
+    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+    ordinal=${BASH_REMATCH[1]}
+
+    echo "[mysqld]" > /mnt/generated/server-id.cnf
+    echo "server-id=$((100 + $ordinal))" >> /mnt/generated/server-id.cnf
+
+    # Copy the configuration for the initial Pod role
+    if [[ $ordinal -eq 0 ]]; then
+      cp /mnt/config/primary.cnf /mnt/generated/
+    else
+      cp /mnt/config/replica.cnf /mnt/generated/
+    fi
+  
+  primary.sh: |
+    #!/bin/bash
+    set -eu
+
+    # Create the replication account only on the initial primary
+    if [[ "$HOSTNAME" == "mysql-0" ]]; then
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+    CREATE DATABASE IF NOT EXISTS clo835;
+    CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';
+    GRANT REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO 'repl'@'%';
+    GRANT SELECT, SHOW VIEW, TRIGGER ON clo835.* TO 'repl'@'%';
+    SQL
+    fi
+  
+  clone.sh: |
+    #!/bin/bash
+    set -eu
+
+    # Prepare the file for the later import step
+    touch /clone/clone.sql
+
+    # Skip cloning if database files already exist
+    [[ -d /var/lib/mysql/mysql ]] && exit 0
+
+    # Skip cloning on the primary
+    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+    ordinal=${BASH_REMATCH[1]}
+    [[ $ordinal -eq 0 ]] && exit 0
+
+    # Wait for the primary, with a limited number of retries
+    attempt=0
+    until mysql --connect-timeout=2 \
+      -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
+      -e "SELECT 1" >/dev/null 2>&1; do
+      attempt=$((attempt + 1))
+      if [[ $attempt -ge 60 ]]; then
+        echo "Cannot connect to the primary." >&2
+        exit 1
+      fi
+      sleep 2
+    done
+
+    # Dump the project database and its replication coordinates
+    mysqldump \
+      -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
+      --single-transaction \
+      --source-data=2 \
+      --no-tablespaces \
+      --databases clo835 > /clone/clone.sql
+
+  replica.sh: |
+    #!/bin/bash
+    set -eu
+
+    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+    ordinal=${BASH_REMATCH[1]}
+
+    # Skip setup on the primary or an already configured replica
+    if [[ $ordinal -eq 0 || -f /var/lib/mysql/.replication-configured ]]; then
+      exec sleep infinity
+    fi
+
+    # Wait for the regular MySQL server, not its temporary init server
+    attempt=0
+    until mysql --connect-timeout=2 \
+      -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" \
+      -e "SELECT 1" >/dev/null 2>&1; do
+      attempt=$((attempt + 1))
+      if [[ $attempt -ge 60 ]]; then
+        echo "Local MySQL server is not ready." >&2
+        exit 1
+      fi
+      sleep 2
+    done
+
+    # Extract the binary log file and position recorded by mysqldump
+    coordinates=$(sed -n 's/^-- CHANGE REPLICATION SOURCE TO \(.*\);$/\1/p' /clone/clone.sql)
+
+    if [[ -z "$coordinates" ]]; then
+      echo "Replication coordinates are missing from the dump." >&2
+      exit 1
+    fi
+
+    mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+    CHANGE REPLICATION SOURCE TO
+      ${coordinates},
+      SOURCE_HOST='mysql-0.mysql-h',
+      SOURCE_USER='repl',
+      SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
+      SOURCE_CONNECT_RETRY=10,
+      GET_SOURCE_PUBLIC_KEY=1;
+    START REPLICA;
+    SQL
+
+    # Persist the setup marker on the database PVC
+    touch /var/lib/mysql/.replication-configured
+    exec sleep infinity

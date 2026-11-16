@@ -64,8 +64,8 @@ locals {
 # Security group
 ########################################################
 resource "aws_security_group" "vm" {
-  name        = "week02-manual-vm"
-  description = "Week02 manual deployment VM"
+  name        = "clo835-project-101753267"
+  description = "CLO835 Project EC2 Host"
   vpc_id      = data.aws_vpc.default.id
 }
 
@@ -79,17 +79,6 @@ resource "aws_security_group_rule" "ssh" {
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "app_manual" {
-  type              = "ingress"
-  security_group_id = aws_security_group.vm.id
-  description       = "SSH"
-  protocol          = "tcp"
-  from_port         = 22
-  to_port           = 22
-  cidr_blocks       = ["0.0.0.0/0"]
-}
-
-
 resource "aws_security_group_rule" "egress" {
   type              = "egress"
   security_group_id = aws_security_group.vm.id
@@ -100,8 +89,9 @@ resource "aws_security_group_rule" "egress" {
 }
 
 ########################################################
-# Instance: ONE machine for the manual deployment.
-# bootstrap.sh installs git and NOTHING else. No Docker, no pip, no Flask.
+# EC2 Host - Prerequisite for Task 10
+# Create one EC2 instance to host the kind cluster.
+# master-init.sh.tftpl installs Docker, kind and kubectl.
 ########################################################
 resource "aws_instance" "vm" {
   ami                    = data.aws_ami.ubuntu.id
@@ -110,6 +100,8 @@ resource "aws_instance" "vm" {
   subnet_id              = local.lab_subnet_id
   vpc_security_group_ids = [aws_security_group.vm.id]
   iam_instance_profile   = var.lab_instance_profile
+
+  user_data = templatefile("${path.module}/master-init.sh.tftpl", {})
 
   metadata_options {
     http_tokens                 = "required"
@@ -120,8 +112,6 @@ resource "aws_instance" "vm" {
     volume_size = 30
     volume_type = "gp3"
   }
-
-  user_data = file("${path.module}/bootstrap.sh")
 
   tags = {
     Name = "clo835-project-101753267"

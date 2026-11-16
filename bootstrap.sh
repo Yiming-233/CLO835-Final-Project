@@ -4,153 +4,128 @@
 # Run from the project repository: bash bootstrap.sh
 set -euo pipefail
 
-# Eviornment Variables
+# Project variables
 STUDENT_ID="101753267"
 NAMESPACE="mysql-${STUDENT_ID}"
 SECRET_NAME="mysql-secrets-${STUDENT_ID}"
 
-# Enter the dirtctory containing the project manifest
+# Enter the project directory
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-# Create 1 control-plane node and 2 worker nodes
+########################################################
+# Task 4 - Initial Clone and Replication
+########################################################
+# Clone and replication scripts are stored in 10-configmap.yaml.
+
+########################################################
+# Task 10 - Create the kind Cluster
+########################################################
 kind create cluster --config kind-config.yaml --wait 180s
 
-# Wait for all nodes to be ready
 kubectl wait --for=condition=Ready nodes --all --timeout=180s
 
-# Display node status and the required StorageClass
 kubectl get nodes -o wide
 kubectl get storageclass standard
 
-# Make a dirctory for manifests
-mkdir -p manifests
+########################################################
+# Tasks 1 and 7 - Namespace and Secret
+########################################################
+
+# Replace only the project-specific placeholders
+sed -i \
+  -e "s|\${NAMESPACE}|${NAMESPACE}|g" \
+  -e "s|\${SECRET_NAME}|${SECRET_NAME}|g" \
+  manifests/*.yaml
+
+# Create the Namespace before creating the Secret
+kubectl apply -f manifests/00-namespace.yaml
+
+# Generate passwords and create the Secret
+kubectl create secret generic "$SECRET_NAME" \
+  -n "$NAMESPACE" \
+  --from-literal=root-password="$(openssl rand -hex 16)" \
+  --from-literal=replication-password="$(openssl rand -hex 16)" \
+  --dry-run=client -o yaml |
+  kubectl apply -f -
+
+kubectl apply -f manifests/
 
 ########################################################
-# Task 1 - Namespace
+# Task 10 - Wait for the MySQL StatefulSet
 ########################################################
-# Generate the Namespace manifest using the Student ID
-cat > manifests/namespace.yaml <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ${NAMESPACE}
-EOF
+kubectl rollout status statefulset/mysql \
+  -n "$NAMESPACE" --timeout=300s
+
+kubectl get pods,pvc -n "$NAMESPACE"
 
 ########################################################
-# Task 5 - Headless and Read Services
+# Task 4 - Display Replication Status
 ########################################################
-# Generate the headless and read Services manifests
-cat > manifests/mysql-services.yaml <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql-h
-  namespace: ${NAMESPACE}
-spec:
-  clusterIP: None
-  selector: {app: mysql}
-  ports:
-    - {port: 3306, targetPort: 3306}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql-read
-  namespace: ${NAMESPACE}
-spec:
-  selector: {app: mysql}
-  ports:
-    - {port: 3306, targetPort: 3306}
-EOF
+for pod in mysql-1 mysql-2; do
+  echo "Replication status: $pod"
+
+  kubectl exec "$pod" -n "$NAMESPACE" -c mysql -- \
+    sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
+done
 
 ########################################################
-# Tasks 2 and 6 - MySQL StatefulSet and PVCs
+# Task 9 - Continuous Writer
 ########################################################
-# MySQL StatefulSet with 3 replicas using mysql:8.0
-# One PVC per Pod, standard StorageClass, at least 1Gi
-cat > manifests/mysql-statefulset.yaml <<EOF
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mysql
-  namespace: ${NAMESPACE}
-spec:
-  serviceName: mysql-h
-  replicas: 3
-  selector:
-    matchLabels: {app: mysql}
-  template:
-    metadata:
-      labels: {app: mysql}
-    spec:
-      containers:
-      - name: mysql
-        image: mysql:8.0
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ${SECRET_NAME}
-              key: root-password
-        ports:
-        - {name: mysql, containerPort: 3306}
-        volumeMounts:
-        - {name: data, mountPath: /var/lib/mysql}
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: [ReadWriteOnce]
-      storageClassName: standard
-      resources: {requests: {storage: 1Gi}}
-EOF
+# Implemented separately in writer.sh; not written yet.
 
 ########################################################
-# Task 7 - Secret
+# Task 8 - Seed Data
 ########################################################
-# Read passwords from local files
-mkdir -p secrets
+kubectl exec -i mysql-0 -n "$NAMESPACE" -c mysql -- \
+  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' <<SQL
+CREATE DATABASE IF NOT EXISTS clo835;
 
-# Generate password files only when they do not exist
-if [ ! -f secrets/password.txt ]; then
-  cat /proc/sys/kernel/random/uuid > secrets/password.txt
+CREATE TABLE IF NOT EXISTS clo835.students (
+  seq BIGINT UNSIGNED PRIMARY KEY,
+  student_id VARCHAR(20) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO clo835.students (seq, student_id) VALUES
+  (1, '${STUDENT_ID}'),
+  (2, '${STUDENT_ID}'),
+  (3, '${STUDENT_ID}'),
+  (4, '${STUDENT_ID}'),
+  (5, '${STUDENT_ID}');
+SQL
+
+########################################################
+# Task 8 - Verify Seed Data on mysql-2
+########################################################
+for attempt in {1..60}; do
+  seed_count=$(kubectl exec mysql-2 -n "$NAMESPACE" -c mysql -- \
+    sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B \
+      -e "SELECT COUNT(*) FROM clo835.students WHERE seq BETWEEN 1 AND 5;"' \
+    2>/dev/null || true)
+
+  if [[ "$seed_count" == "5" ]]; then
+    break
+  fi
+
+  sleep 2
+done
+
+if [[ "$seed_count" != "5" ]]; then
+  echo "Seed data verification failed on mysql-2." >&2
+  exit 1
 fi
 
-chmod 700 secrets
-chmod 600 secrets/password.txt
-
-ROOT_PASSWORD=$(cat secrets/password.txt)
-REPLICATION_PASSWORD="$ROOT_PASSWORD"
-
-# Generate the Kubernetes Secret manifest
-cat > manifests/mysql-secrets.yaml <<EOF
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${SECRET_NAME}
-  namespace: ${NAMESPACE}
-type: Opaque
-stringData:
-  root-password: "${ROOT_PASSWORD}"
-  replication-password: "${REPLICATION_PASSWORD}"
-EOF
-
-chmod 600 manifests/mysql-secrets.yaml
+kubectl exec mysql-2 -n "$NAMESPACE" -c mysql -- \
+  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table \
+    -e "SELECT seq, student_id, created_at FROM clo835.students ORDER BY seq;"'
+    
+########################################################
+# Task 11 - Deployment Through Raw Manifests
+########################################################
+# The final deployment must use kubectl apply -f manifests/.
 
 ########################################################
-# Task 7 - ConfigMap
+# Task 12 - Git Repository and Reproducibility
 ########################################################
-# Store MySQL configuration in a ConfigMap
-cat > manifests/mysql-configmap.yaml <<EOF
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mysql-config
-  namespace: ${NAMESPACE}
-data:
-  mysql.cnf: |
-    [mysqld]
-    log-bin=mysql-bin
-    binlog-format=ROW
-    log-replica-updates=ON
-EOF
+# Commit all required project files.
+# Do not commit actual passwords.

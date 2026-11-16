@@ -1,0 +1,55 @@
+#!/bin/bash
+########################################################
+# CLO835 Final Project - EC2 Host Preparation
+# Prerequisite for Task 10 - Bootstrap Deployment
+# Executed by Terraform through EC2 user_data as root
+########################################################
+
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+########################################################
+# Install Docker and supporting tools
+########################################################
+apt-get update -y
+apt-get install -y docker.io curl ca-certificates git openssl
+
+systemctl enable --now docker
+usermod -aG docker ubuntu
+
+########################################################
+# Install kind
+########################################################
+curl -fL --retry 3 \
+  https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 \
+  -o /tmp/kind
+
+install -m 0755 /tmp/kind /usr/local/bin/kind
+
+########################################################
+# Install kubectl
+########################################################
+curl -fL --retry 3 \
+  https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl \
+  -o /tmp/kubectl
+
+install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+
+########################################################
+# Check installed tools
+########################################################
+docker --version
+kind version
+kubectl version --client
+
+########################################################
+# Login message
+########################################################
+cat > /etc/motd <<'MOTD'
+
+CLO835 Final Project - EC2 Host
+Docker, kind and kubectl installation is handled by cloud-init.
+Before deployment, check: sudo cloud-init status --wait
+Run the project bootstrap.sh as the ubuntu user.
+
+MOTD
