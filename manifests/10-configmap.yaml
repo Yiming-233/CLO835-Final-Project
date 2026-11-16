@@ -6,7 +6,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mysql-config
-  namespace: ${NAMESPACE}
+  namespace: mysql-101753267
 data:
   primary.cnf: |
     [mysqld]
@@ -116,7 +116,10 @@ data:
     done
 
     # Extract the binary log file and position recorded by mysqldump
-    coordinates=$(sed -n 's/^-- CHANGE REPLICATION SOURCE TO \(.*\);$/\1/p' /clone/clone.sql)
+    coordinates=$(sed -n -E \
+      's/^-- CHANGE (REPLICATION SOURCE|MASTER) TO (.*);$/\2/p' \
+      /clone/clone.sql |
+      sed 's/MASTER_LOG_FILE/SOURCE_LOG_FILE/g; s/MASTER_LOG_POS/SOURCE_LOG_POS/g')
 
     if [[ -z "$coordinates" ]]; then
       echo "Replication coordinates are missing from the dump." >&2
