@@ -25,7 +25,10 @@ kubectl get storageclass standard
 # Make a dirctory for manifests
 mkdir -p manifests
 
-# Task 1: Generate the Namespace manifest using the Student ID
+########################################################
+# Task 1 - Namespace
+########################################################
+# Generate the Namespace manifest using the Student ID
 cat > manifests/namespace.yaml <<EOF
 apiVersion: v1
 kind: Namespace
@@ -33,7 +36,10 @@ metadata:
   name: ${NAMESPACE}
 EOF
 
-# Task5: Generate the headless and read Services manifests
+########################################################
+# Task 5 - Headless and Read Services
+########################################################
+# Generate the headless and read Services manifests
 cat > manifests/mysql-services.yaml <<EOF
 apiVersion: v1
 kind: Service
@@ -57,14 +63,17 @@ spec:
     - {port: 3306, targetPort: 3306}
 EOF
 
-# Task 2: MySQL StatefulSet with 3 replicas using mysql:8.0
-# Task 6: One PVC per Pod, standard StorageClass, at least 1Gi
+########################################################
+# Tasks 2 and 6 - MySQL StatefulSet and PVCs
+########################################################
+# MySQL StatefulSet with 3 replicas using mysql:8.0
+# One PVC per Pod, standard StorageClass, at least 1Gi
 cat > manifests/mysql-statefulset.yaml <<EOF
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mysql
-    namespace: ${NAMESPACE}
+  namespace: ${NAMESPACE}
 spec:
   serviceName: mysql-h
   replicas: 3
@@ -77,6 +86,12 @@ spec:
       containers:
       - name: mysql
         image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ${SECRET_NAME}
+              key: root-password
         ports:
         - {name: mysql, containerPort: 3306}
         volumeMounts:
@@ -88,4 +103,54 @@ spec:
       accessModes: [ReadWriteOnce]
       storageClassName: standard
       resources: {requests: {storage: 1Gi}}
-  EOF
+EOF
+
+########################################################
+# Task 7 - Secret
+########################################################
+# Read passwords from local files
+mkdir -p secrets
+
+# Generate password files only when they do not exist
+if [ ! -f secrets/password.txt ]; then
+  cat /proc/sys/kernel/random/uuid > secrets/password.txt
+fi
+
+chmod 700 secrets
+chmod 600 secrets/password.txt
+
+ROOT_PASSWORD=$(cat secrets/password.txt)
+REPLICATION_PASSWORD="$ROOT_PASSWORD"
+
+# Generate the Kubernetes Secret manifest
+cat > manifests/mysql-secrets.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${SECRET_NAME}
+  namespace: ${NAMESPACE}
+type: Opaque
+stringData:
+  root-password: "${ROOT_PASSWORD}"
+  replication-password: "${REPLICATION_PASSWORD}"
+EOF
+
+chmod 600 manifests/mysql-secrets.yaml
+
+########################################################
+# Task 7 - ConfigMap
+########################################################
+# Store MySQL configuration in a ConfigMap
+cat > manifests/mysql-configmap.yaml <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: ${NAMESPACE}
+data:
+  mysql.cnf: |
+    [mysqld]
+    log-bin=mysql-bin
+    binlog-format=ROW
+    log-replica-updates=ON
+EOF

@@ -14,3 +14,10 @@ credentials
 
 # OS
 .DS_Store
+
+# Generated MySQL passwords
+/manifests/mysql-secrets.yaml
+
+# Local passwords and generated Secret manifest
+/secrets/
+/manifests/mysql-secrets.yaml
