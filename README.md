@@ -25,7 +25,3 @@ See [runbook.md](runbook.md) for detailed commands and recovery procedures.
 - [Kubernetes replicated MySQL tutorial](https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/)
 
 The tutorial was adapted to use MySQL 8.0 and mysqldump instead of MySQL 5.7 and XtraBackup.
-
-## Project Instructions
-
-The original instructor-provided instructions are saved in `docs/Project_01_MySQL_StatefulSet_failover.docx`.

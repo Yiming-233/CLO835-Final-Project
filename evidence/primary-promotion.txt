@@ -1,0 +1,118 @@
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- \
+  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "
+    SET PERSIST read_only=ON;
+    SET PERSIST super_read_only=ON;
+    SELECT @@read_only, @@super_read_only;
+    SHOW MASTER STATUS;
+  "'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+@@read_only     @@super_read_only
+1       1
+File    Position        Binlog_Do_DB    Binlog_Ignore_DB        Executed_Gtid_Set
+mysql-bin.000003        4480
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl delete pod mysql-0 -n mysql-101753267
+kubectl wait --for=condition=Ready pod/mysql-0 \
+  -n mysql-101753267 --timeout=180s
+pod "mysql-0" deleted from mysql-101753267 namespace
+pod/mysql-0 condition met
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT @@read_only, @@super_read_only;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+@@read_only     @@super_read_only
+1       1
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "STOP REPLICA; RESET REPLICA ALL; SET PERSIST super_read_only=OFF; SET PERSIST read_only=OFF; SELECT @@read_only, @@super_read_only;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+@@read_only     @@super_read_only
+0       0
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW MASTER STATUS; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+File    Position        Binlog_Do_DB    Binlog_Ignore_DB        Executed_Gtid_Set
+mysql-bin.000004        157
+MAX(seq)        COUNT(*)
+16      16
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl wait --for=condition=Ready pod/mysql-0   -n mysql-101753267 --timeout=180s
+pod/mysql-0 condition met
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec -i mysql-1 -n mysql-101753267 -c mysql -- bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+CREATE USER 'repl'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+SHOW MASTER STATUS;
+SQL
+BASH
+mysql: [Warning] Using a password on the command line interface can be insecure.
+File    Position        Binlog_Do_DB    Binlog_Ignore_DB        Executed_Gtid_Set
+mysql-bin.000004        689
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec -i mysql-2 -n mysql-101753267 -c mysql -- bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+STOP REPLICA;
+RESET REPLICA ALL;
+CHANGE REPLICATION SOURCE TO
+  SOURCE_HOST='mysql-1.mysql-h',
+  SOURCE_USER='repl',
+  SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
+  SOURCE_LOG_FILE='mysql-bin.000004',
+  SOURCE_LOG_POS=689,
+  SOURCE_CONNECT_RETRY=10,
+  GET_SOURCE_PUBLIC_KEY=1;
+START REPLICA;
+SQL
+BASH
+mysql: [Warning] Using a password on the command line interface can be insecure.
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-1.mysql-h
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec -i mysql-0 -n mysql-101753267 -c mysql -- bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+CHANGE REPLICATION SOURCE TO
+  SOURCE_HOST='mysql-1.mysql-h',
+  SOURCE_USER='repl',
+  SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
+  SOURCE_LOG_FILE='mysql-bin.000004',
+  SOURCE_LOG_POS=689,
+  SOURCE_CONNECT_RETRY=10,
+  GET_SOURCE_PUBLIC_KEY=1;
+START REPLICA;
+SQL
+BASH
+mysql: [Warning] Using a password on the command line interface can be insecure.
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-1.mysql-h
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ ./writer.sh mysql-1
+Writing to mysql-1. Press Ctrl+C to stop.
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:28+00:00 pod=mysql-1 seq=17 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:29+00:00 pod=mysql-1 seq=18 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:30+00:00 pod=mysql-1 seq=19 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:32+00:00 pod=mysql-1 seq=20 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:33+00:00 pod=mysql-1 seq=21 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+2026-11-23T16:28:34+00:00 pod=mysql-1 seq=22 student=101753267
+^C
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ tail -n 3 writer-ack.log
+2026-11-23T16:28:32+00:00 pod=mysql-1 seq=20 student=101753267
+2026-11-23T16:28:33+00:00 pod=mysql-1 seq=21 student=101753267
+2026-11-23T16:28:34+00:00 pod=mysql-1 seq=22 student=101753267
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+MAX(seq)        COUNT(*)
+22      22
+mysql: [Warning] Using a password on the command line interface can be insecure.
+MAX(seq)        COUNT(*)
+22      22
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ 

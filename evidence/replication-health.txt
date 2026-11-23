@@ -1,0 +1,20 @@
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- \
+  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' |
+  grep -E 'Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ kubectl exec mysql-2 -n mysql-101753267 -c mysql -- \                                                                                                              
+  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' |
+  grep -E 'Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-3-52:~/CLO835-Final-Project$ 
