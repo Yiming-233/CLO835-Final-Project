@@ -21,3 +21,5 @@ credentials
 # Local passwords and generated Secret manifest
 /secrets/
 /manifests/mysql-secrets.yaml
+
+/writer-ack.log

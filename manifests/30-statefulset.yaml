@@ -9,24 +9,27 @@ metadata:
   name: mysql
   namespace: ${NAMESPACE}
 spec:
-  serviceName: mysql-h
-  replicas: 3
   selector:
     matchLabels: {app: mysql}
+  serviceName: mysql-h
+  replicas: 3
   template:
     metadata:
       labels: {app: mysql}
     spec:
       initContainers:
-      - name: init-config
+      - name: init-mysql
         image: mysql:8.0
-        command: ["bash", "/mnt/config/init-config.sh"]
+        command: ["bash", "/mnt/config-map/init-config.sh"]
         volumeMounts:
-        - {name: config, mountPath: /mnt/config}
-        - {name: generated-config, mountPath: /mnt/generated}
+        - name: conf
+          mountPath: /mnt/conf.d
+        - name: config-map
+          mountPath: /mnt/config-map
+          
       - name: clone-mysql
         image: mysql:8.0
-        command: ["bash", "/mnt/config/clone.sh"]
+        command: ["bash", "/mnt/config-map/clone.sh"]
         env:
         - name: REPLICATION_PASSWORD
           valueFrom:
@@ -34,7 +37,7 @@ spec:
               name: ${SECRET_NAME}
               key: replication-password
         volumeMounts:
-        - {name: config, mountPath: /mnt/config}
+        - {name: config-map, mountPath: /mnt/config-map}
         - {name: data, mountPath: /var/lib/mysql, readOnly: true}
         - {name: clone, mountPath: /clone}
 
@@ -53,11 +56,14 @@ spec:
               name: ${SECRET_NAME}
               key: replication-password
         ports:
-        - {name: mysql, containerPort: 3306}
+        - name: mysql
+          containerPort: 3306
         volumeMounts:
-        - {name: data, mountPath: /var/lib/mysql}
-        - {name: generated-config, mountPath: /etc/mysql/conf.d}
-        - name: config
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        - name: config-map
           mountPath: /docker-entrypoint-initdb.d/primary.sh
           subPath: primary.sh
         - name: clone
@@ -72,9 +78,10 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 2
           timeoutSeconds: 3
+
       - name: replication
         image: mysql:8.0
-        command: ["bash", "/mnt/config/replica.sh"]
+        command: ["bash", "/mnt/config-map/replica.sh"]
         env:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
@@ -87,14 +94,18 @@ spec:
               name: ${SECRET_NAME}
               key: replication-password
         volumeMounts:
-        - {name: config, mountPath: /mnt/config, readOnly: true}
-        - {name: clone, mountPath: /clone, readOnly: true}
-        - {name: data, mountPath: /var/lib/mysql}
+        - name: config-map
+          mountPath: /mnt/config-map
+        - name: clone
+          mountPath: /clone
+          readOnly: true
+        - name: data
+          mountPath: /var/lib/mysql
       volumes:
-      - name: config
+      - name: config-map
         configMap:
           name: mysql-config
-      - name: generated-config
+      - name: conf
         emptyDir: {}
       - name: clone
         emptyDir: {}

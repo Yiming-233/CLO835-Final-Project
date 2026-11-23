@@ -10,16 +10,8 @@ NAMESPACE="mysql-${STUDENT_ID}"
 SECRET_NAME="mysql-secrets-${STUDENT_ID}"
 
 # Enter the project directory
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "$0")"
 
-########################################################
-# Task 4 - Initial Clone and Replication
-########################################################
-# Clone and replication scripts are stored in 10-configmap.yaml.
-
-########################################################
-# Task 10 - Create the kind Cluster
-########################################################
 kind create cluster --config kind-config.yaml --wait 180s
 
 kubectl wait --for=condition=Ready nodes --all --timeout=180s
@@ -61,37 +53,31 @@ kubectl get pods,pvc -n "$NAMESPACE"
 ########################################################
 # Task 4 - Display Replication Status
 ########################################################
+# Check replication on both replicas
 for pod in mysql-1 mysql-2; do
-  echo "Replication status: $pod"
-
+  echo "$pod:"
   kubectl exec "$pod" -n "$NAMESPACE" -c mysql -- \
     sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
 done
 
-########################################################
-# Task 9 - Continuous Writer
-########################################################
-# Implemented separately in writer.sh; not written yet.
-
-########################################################
-# Task 8 - Seed Data
-########################################################
+# Create the database, table and five initial rows
 kubectl exec -i mysql-0 -n "$NAMESPACE" -c mysql -- \
   sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' <<SQL
 CREATE DATABASE IF NOT EXISTS clo835;
+USE clo835;
 
-CREATE TABLE IF NOT EXISTS clo835.students (
+CREATE TABLE IF NOT EXISTS students (
   seq BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   student_id VARCHAR(20) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
-INSERT INTO clo835.students (seq, student_id) VALUES
-  (1, '${STUDENT_ID}'),
-  (2, '${STUDENT_ID}'),
-  (3, '${STUDENT_ID}'),
-  (4, '${STUDENT_ID}'),
-  (5, '${STUDENT_ID}');
+INSERT INTO students (student_id) VALUES
+('${STUDENT_ID}'),
+('${STUDENT_ID}'),
+('${STUDENT_ID}'),
+('${STUDENT_ID}'),
+('${STUDENT_ID}');
 SQL
 
 ########################################################
@@ -118,14 +104,3 @@ fi
 kubectl exec mysql-2 -n "$NAMESPACE" -c mysql -- \
   sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table \
     -e "SELECT seq, student_id, created_at FROM clo835.students ORDER BY seq;"'
-
-########################################################
-# Task 11 - Deployment Through Raw Manifests
-########################################################
-# The final deployment must use kubectl apply -f manifests/.
-
-########################################################
-# Task 12 - Git Repository and Reproducibility
-########################################################
-# Commit all required project files.
-# Do not commit actual passwords.

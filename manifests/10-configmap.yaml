@@ -6,20 +6,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mysql-config
-  namespace: mysql-101753267
+  namespace: ${NAMESPACE}
 data:
   primary.cnf: |
     [mysqld]
     log-bin=mysql-bin
-    binlog-format=ROW
-    log-replica-updates=ON
-    read-only=OFF
 
   replica.cnf: |
     [mysqld]
     log-bin=mysql-bin
-    binlog-format=ROW
-    log-replica-updates=ON
     read-only=ON
 
   init-config.sh: |
@@ -30,14 +25,14 @@ data:
     [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
     ordinal=${BASH_REMATCH[1]}
 
-    echo "[mysqld]" > /mnt/generated/server-id.cnf
-    echo "server-id=$((100 + $ordinal))" >> /mnt/generated/server-id.cnf
+    echo "[mysqld]" > /mnt/conf.d/server-id.cnf
+    echo "server-id=$((100 + $ordinal))" >> /mnt/conf.d/server-id.cnf
 
     # Copy the configuration for the initial Pod role
     if [[ $ordinal -eq 0 ]]; then
-      cp /mnt/config/primary.cnf /mnt/generated/
+      cp /mnt/config-map/primary.cnf /mnt/conf.d/
     else
-      cp /mnt/config/replica.cnf /mnt/generated/
+      cp /mnt/config-map/replica.cnf /mnt/conf.d/
     fi
   
   primary.sh: |
@@ -69,16 +64,10 @@ data:
     ordinal=${BASH_REMATCH[1]}
     [[ $ordinal -eq 0 ]] && exit 0
 
-    # Wait for the primary, with a limited number of retries
-    attempt=0
+    # Wait for the primary, following the tutorial loop structure
     until mysql --connect-timeout=2 \
       -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
-      -e "SELECT 1" >/dev/null 2>&1; do
-      attempt=$((attempt + 1))
-      if [[ $attempt -ge 60 ]]; then
-        echo "Cannot connect to the primary." >&2
-        exit 1
-      fi
+      -e "SELECT 1" >/dev/null; do
       sleep 2
     done
 
@@ -103,15 +92,9 @@ data:
     fi
 
     # Wait for the regular MySQL server, not its temporary init server
-    attempt=0
     until mysql --connect-timeout=2 \
       -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" \
-      -e "SELECT 1" >/dev/null 2>&1; do
-      attempt=$((attempt + 1))
-      if [[ $attempt -ge 60 ]]; then
-        echo "Local MySQL server is not ready." >&2
-        exit 1
-      fi
+      -e "SELECT 1" >/dev/null; do
       sleep 2
     done
 
