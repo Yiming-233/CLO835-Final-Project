@@ -1,0 +1,651 @@
+=== Terminal A - Bootstrap ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ ./bootstrap.sh
+Bootstrap starting...
+Creating cluster "kind" ...
+ ✓ Ensuring node image (kindest/node:v1.35.8) 🖼️
+ ✓ Preparing nodes 📦 📦 📦  
+ ✓ Writing configuration 📜 
+ ✓ Starting control-plane 🕹️ 
+ ✓ Installing CNI 🔌 
+ ✓ Installing StorageClass 💾 
+ ✓ Joining worker nodes 🚜 
+ ✓ Waiting ≤ 3m0s for control-plane = Ready ⏳ 
+ • Ready after 10s 💚
+Set kubectl context to "kind-kind"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-kind
+
+Not sure what to do next? 😅  Check out https://kind.sigs.k8s.io/docs/user/quick-start/
+node/kind-control-plane condition met
+node/kind-worker condition met
+node/kind-worker2 condition met
+NAME                 STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION   CONTAINER-RUNTIME
+kind-control-plane   Ready    control-plane   29s   v1.35.8   172.18.0.4    <none>        Debian GNU/Linux 13 (trixie)   7.0.0-1018-aws   containerd://2.3.4
+kind-worker          Ready    <none>          18s   v1.35.8   172.18.0.2    <none>        Debian GNU/Linux 13 (trixie)   7.0.0-1018-aws   containerd://2.3.4
+kind-worker2         Ready    <none>          18s   v1.35.8   172.18.0.3    <none>        Debian GNU/Linux 13 (trixie)   7.0.0-1018-aws   containerd://2.3.4
+NAME                 PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+standard (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  25s
+namespace/mysql-101753267 created
+secret/mysql-secrets-101753267 created
+namespace/mysql-101753267 unchanged
+configmap/mysql-config created
+service/mysql-h created
+service/mysql-read created
+statefulset.apps/mysql created
+pod/mysql-0 condition met
+pod/mysql-0 condition met
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Waiting for 2 pods to be ready...
+Waiting for 1 pods to be ready...
+Waiting for 1 pods to be ready...
+partitioned roll out complete: 3 new pods have been updated...
+NAME          READY   STATUS    RESTARTS   AGE
+pod/mysql-0   2/2     Running   0          92s
+pod/mysql-1   2/2     Running   0          55s
+pod/mysql-2   2/2     Running   0          20s
+
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-mysql-0   Bound    pvc-a6f954c7-00fc-449c-9022-5aa7c2f913eb   1Gi        RWO            standard       <unset>                 92s
+persistentvolumeclaim/data-mysql-1   Bound    pvc-1e4dcb02-3c6a-4ffe-8df2-0f2d2cb30a18   1Gi        RWO            standard       <unset>                 55s
+persistentvolumeclaim/data-mysql-2   Bound    pvc-0f3b98f0-d924-4291-a5b8-396d976dd340   1Gi        RWO            standard       <unset>                 20s
+mysql: [Warning] Using a password on the command line interface can be insecure.
+*************************** 1. row ***************************
+             Replica_IO_State: Waiting for source to send event
+                  Source_Host: mysql-0.mysql-h
+                  Source_User: repl
+                  Source_Port: 3306
+                Connect_Retry: 10
+              Source_Log_File: mysql-0-bin.000003
+          Read_Source_Log_Pos: 1166
+               Relay_Log_File: mysql-1-relay-bin.000002
+                Relay_Log_Pos: 328
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+              Replicate_Do_DB: 
+          Replicate_Ignore_DB: 
+           Replicate_Do_Table: 
+       Replicate_Ignore_Table: 
+      Replicate_Wild_Do_Table: 
+  Replicate_Wild_Ignore_Table: 
+                   Last_Errno: 0
+                   Last_Error: 
+                 Skip_Counter: 0
+          Exec_Source_Log_Pos: 1166
+              Relay_Log_Space: 540
+              Until_Condition: None
+               Until_Log_File: 
+                Until_Log_Pos: 0
+           Source_SSL_Allowed: No
+           Source_SSL_CA_File: 
+           Source_SSL_CA_Path: 
+              Source_SSL_Cert: 
+            Source_SSL_Cipher: 
+               Source_SSL_Key: 
+        Seconds_Behind_Source: 0
+Source_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error: 
+               Last_SQL_Errno: 0
+               Last_SQL_Error: 
+  Replicate_Ignore_Server_Ids: 
+             Source_Server_Id: 100
+                  Source_UUID: 6b8b56a7-e828-11f1-94b7-723829cd1441
+             Source_Info_File: mysql.slave_master_info
+                    SQL_Delay: 0
+          SQL_Remaining_Delay: NULL
+    Replica_SQL_Running_State: Replica has read all relay log; waiting for more updates
+           Source_Retry_Count: 86400
+                  Source_Bind: 
+      Last_IO_Error_Timestamp: 
+     Last_SQL_Error_Timestamp: 
+               Source_SSL_Crl: 
+           Source_SSL_Crlpath: 
+           Retrieved_Gtid_Set: 
+            Executed_Gtid_Set: 
+                Auto_Position: 0
+         Replicate_Rewrite_DB: 
+                 Channel_Name: 
+           Source_TLS_Version: 
+       Source_public_key_path: 
+        Get_Source_public_key: 1
+            Network_Namespace: 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+*************************** 1. row ***************************
+             Replica_IO_State: Connecting to source
+                  Source_Host: mysql-0.mysql-h
+                  Source_User: repl
+                  Source_Port: 3306
+                Connect_Retry: 10
+              Source_Log_File: mysql-0-bin.000003
+          Read_Source_Log_Pos: 1166
+               Relay_Log_File: mysql-2-relay-bin.000001
+                Relay_Log_Pos: 4
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Connecting
+          Replica_SQL_Running: Yes
+              Replicate_Do_DB: 
+          Replicate_Ignore_DB: 
+           Replicate_Do_Table: 
+       Replicate_Ignore_Table: 
+      Replicate_Wild_Do_Table: 
+  Replicate_Wild_Ignore_Table: 
+                   Last_Errno: 0
+                   Last_Error: 
+                 Skip_Counter: 0
+          Exec_Source_Log_Pos: 1166
+              Relay_Log_Space: 157
+              Until_Condition: None
+               Until_Log_File: 
+                Until_Log_Pos: 0
+           Source_SSL_Allowed: No
+           Source_SSL_CA_File: 
+           Source_SSL_CA_Path: 
+              Source_SSL_Cert: 
+            Source_SSL_Cipher: 
+               Source_SSL_Key: 
+        Seconds_Behind_Source: NULL
+Source_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error: 
+               Last_SQL_Errno: 0
+               Last_SQL_Error: 
+  Replicate_Ignore_Server_Ids: 
+             Source_Server_Id: 0
+                  Source_UUID: 
+             Source_Info_File: mysql.slave_master_info
+                    SQL_Delay: 0
+          SQL_Remaining_Delay: NULL
+    Replica_SQL_Running_State: waiting for handler commit
+           Source_Retry_Count: 86400
+                  Source_Bind: 
+      Last_IO_Error_Timestamp: 
+     Last_SQL_Error_Timestamp: 
+               Source_SSL_Crl: 
+           Source_SSL_Crlpath: 
+           Retrieved_Gtid_Set: 
+            Executed_Gtid_Set: 
+                Auto_Position: 0
+         Replicate_Rewrite_DB: 
+                 Channel_Name: 
+           Source_TLS_Version: 
+       Source_public_key_path: 
+        Get_Source_public_key: 1
+            Network_Namespace: 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-----+------------+---------------------+
+| seq | student_id | created_at          |
++-----+------------+---------------------+
+|   1 | 101753267  | 2026-11-24 17:00:41 |
+|   2 | 101753267  | 2026-11-24 17:00:41 |
+|   3 | 101753267  | 2026-11-24 17:00:41 |
+|   4 | 101753267  | 2026-11-24 17:00:41 |
+|   5 | 101753267  | 2026-11-24 17:00:41 |
++-----+------------+---------------------+
+Bootstrap completed in 143 seconds.
+
+=== Terminal A - first Writer session ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-0.mysql-h
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 2125
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-0.mysql-h
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 2125
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ ./writer.sh mysql-0 2>&1 | grep -vF 'mysql: [Warning] Using a password on the command line interface can be insecure.'
+Writing to mysql-0. Press Ctrl+C to stop.
+2026-11-24T17:01:04+00:00 pod=mysql-0 seq=6 student=101753267
+2026-11-24T17:01:05+00:00 pod=mysql-0 seq=7 student=101753267
+2026-11-24T17:01:07+00:00 pod=mysql-0 seq=8 student=101753267
+2026-11-24T17:01:08+00:00 pod=mysql-0 seq=9 student=101753267
+2026-11-24T17:01:09+00:00 pod=mysql-0 seq=10 student=101753267
+2026-11-24T17:01:10+00:00 pod=mysql-0 seq=11 student=101753267
+2026-11-24T17:01:11+00:00 pod=mysql-0 seq=12 student=101753267
+2026-11-24T17:01:12+00:00 pod=mysql-0 seq=13 student=101753267
+2026-11-24T17:01:13+00:00 pod=mysql-0 seq=14 student=101753267
+2026-11-24T17:01:15+00:00 pod=mysql-0 seq=15 student=101753267
+2026-11-24T17:01:16+00:00 pod=mysql-0 seq=16 student=101753267
+2026-11-24T17:01:17+00:00 pod=mysql-0 seq=17 student=101753267
+2026-11-24T17:01:18+00:00 pod=mysql-0 seq=18 student=101753267
+2026-11-24T17:01:19+00:00 pod=mysql-0 seq=19 student=101753267
+2026-11-24T17:01:20+00:00 pod=mysql-0 seq=20 student=101753267
+2026-11-24T17:01:22+00:00 pod=mysql-0 seq=21 student=101753267
+2026-11-24T17:01:23+00:00 pod=mysql-0 seq=22 student=101753267
+2026-11-24T17:01:24+00:00 pod=mysql-0 seq=23 student=101753267
+2026-11-24T17:01:25+00:00 pod=mysql-0 seq=24 student=101753267
+2026-11-24T17:01:26+00:00 pod=mysql-0 seq=25 student=101753267
+2026-11-24T17:01:27+00:00 pod=mysql-0 seq=26 student=101753267
+2026-11-24T17:01:29+00:00 pod=mysql-0 seq=27 student=101753267
+2026-11-24T17:01:30+00:00 pod=mysql-0 seq=28 student=101753267
+2026-11-24T17:01:31+00:00 pod=mysql-0 seq=29 student=101753267
+2026-11-24T17:01:32+00:00 pod=mysql-0 seq=30 student=101753267
+2026-11-24T17:01:33+00:00 pod=mysql-0 seq=31 student=101753267
+2026-11-24T17:01:34+00:00 pod=mysql-0 seq=32 student=101753267
+2026-11-24T17:01:35+00:00 pod=mysql-0 seq=33 student=101753267
+2026-11-24T17:01:37+00:00 pod=mysql-0 seq=34 student=101753267
+2026-11-24T17:01:38+00:00 pod=mysql-0 seq=35 student=101753267
+2026-11-24T17:01:39+00:00 pod=mysql-0 seq=36 student=101753267
+2026-11-24T17:01:40+00:00 pod=mysql-0 seq=37 student=101753267
+2026-11-24T17:01:41+00:00 pod=mysql-0 seq=38 student=101753267
+2026-11-24T17:01:42+00:00 pod=mysql-0 seq=39 student=101753267
+2026-11-24T17:01:43+00:00 pod=mysql-0 seq=40 student=101753267
+2026-11-24T17:01:45+00:00 pod=mysql-0 seq=41 student=101753267
+2026-11-24T17:01:46+00:00 pod=mysql-0 seq=42 student=101753267
+2026-11-24T17:01:47+00:00 pod=mysql-0 seq=43 student=101753267
+2026-11-24T17:01:48+00:00 pod=mysql-0 seq=44 student=101753267
+2026-11-24T17:01:49+00:00 pod=mysql-0 seq=45 student=101753267
+2026-11-24T17:01:50+00:00 pod=mysql-0 seq=46 student=101753267
+2026-11-24T17:01:51+00:00 pod=mysql-0 seq=47 student=101753267
+2026-11-24T17:01:53+00:00 pod=mysql-0 seq=48 student=101753267
+2026-11-24T17:01:54+00:00 pod=mysql-0 seq=49 student=101753267
+2026-11-24T17:01:55+00:00 pod=mysql-0 seq=50 student=101753267
+2026-11-24T17:01:56+00:00 pod=mysql-0 seq=51 student=101753267
+2026-11-24T17:01:57+00:00 pod=mysql-0 seq=52 student=101753267
+2026-11-24T17:01:59+00:00 pod=mysql-0 seq=53 student=101753267
+2026-11-24T17:02:00+00:00 pod=mysql-0 seq=54 student=101753267
+2026-11-24T17:02:01+00:00 pod=mysql-0 seq=55 student=101753267
+2026-11-24T17:02:02+00:00 pod=mysql-0 seq=56 student=101753267
+2026-11-24T17:02:03+00:00 pod=mysql-0 seq=57 student=101753267
+2026-11-24T17:02:04+00:00 pod=mysql-0 seq=58 student=101753267
+2026-11-24T17:02:05+00:00 pod=mysql-0 seq=59 student=101753267
+2026-11-24T17:02:07+00:00 pod=mysql-0 seq=60 student=101753267
+2026-11-24T17:02:08+00:00 pod=mysql-0 seq=61 student=101753267
+ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/run/mysqld/mysqld.sock' (2)
+command terminated with exit code 1
+Write result uncertain. Stop and check the database.
+
+=== Terminal B - recovery, promotion and pre-resume data check ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ tail -n 1 writer-ack.log
+kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+2026-11-24T17:01:07+00:00 pod=mysql-0 seq=8 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+MAX(seq)        COUNT(*)
+8       8
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl get pod mysql-1 -n mysql-101753267 -o wide
+kubectl get pvc data-mysql-1 -n mysql-101753267
+NAME      READY   STATUS    RESTARTS   AGE   IP           NODE           NOMINATED NODE   READINESS GATES
+mysql-1   2/2     Running   0          90s   10.244.1.3   kind-worker2   <none>           <none>
+NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-mysql-1   Bound    pvc-1e4dcb02-3c6a-4ffe-8df2-0f2d2cb30a18   1Gi        RWO            standard       <unset>                 90s
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl delete pod mysql-1 -n mysql-101753267
+kubectl wait --for=condition=Ready pod/mysql-1 -n mysql-101753267 --timeout=180s
+kubectl get pod mysql-1 -n mysql-101753267 -o wide
+kubectl get pvc data-mysql-1 -n mysql-101753267
+kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+pod "mysql-1" deleted from mysql-101753267 namespace
+pod/mysql-1 condition met
+NAME      READY   STATUS    RESTARTS   AGE   IP           NODE           NOMINATED NODE   READINESS GATES
+mysql-1   2/2     Running   0          8s    10.244.1.4   kind-worker2   <none>           <none>
+NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-mysql-1   Bound    pvc-1e4dcb02-3c6a-4ffe-8df2-0f2d2cb30a18   1Gi        RWO            standard       <unset>                 2m18s
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-0.mysql-h
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 17985
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ FAILOVER_START=$SECONDS
+kubectl delete pod mysql-0 -n mysql-101753267
+pod "mysql-0" deleted from mysql-101753267 namespace
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ tail -n 1 writer-ack.log
+kubectl wait --for=condition=Ready pod/mysql-0 -n mysql-101753267 --timeout=180s
+kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SET PERSIST super_read_only=ON; SELECT @@read_only, @@super_read_only; SHOW MASTER STATUS;"'
+2026-11-24T17:02:08+00:00 pod=mysql-0 seq=61 student=101753267
+pod/mysql-0 condition met
+mysql: [Warning] Using a password on the command line interface can be insecure.
+@@read_only     @@super_read_only
+1       1
+File    Position        Binlog_Do_DB    Binlog_Ignore_DB        Executed_Gtid_Set
+mysql-0-bin.000004      157
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ tail -n 1 writer-ack.log
+kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
+2026-11-24T17:02:08+00:00 pod=mysql-0 seq=61 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
+MAX(seq)        COUNT(*)
+61      61
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Connecting
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 19205
+                Last_IO_Error: Error reconnecting to source 'repl@mysql-0.mysql-h:3306'. This was attempt 4/86400, with a delay of 10 seconds between attempts. Message: Unknown MySQL server host 'mysql-0.mysql-h' (-2)
+               Last_SQL_Error: 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+MAX(seq)        COUNT(*)
+61      61
+        Relay_Source_Log_File: mysql-0-bin.000003
+           Replica_IO_Running: Connecting
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 19205
+                Last_IO_Error: Error reconnecting to source 'repl@mysql-0.mysql-h:3306'. This was attempt 4/86400, with a delay of 10 seconds between attempts. Message: Unknown MySQL server host 'mysql-0.mysql-h' (-2)
+               Last_SQL_Error: 
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "STOP REPLICA; RESET REPLICA ALL; SET PERSIST super_read_only=OFF; SET PERSIST read_only=OFF; SELECT @@read_only, @@super_read_only;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+@@read_only     @@super_read_only
+0       0
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec -i mysql-1 -n mysql-101753267 -c mysql -- bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+CREATE USER 'repl'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+SHOW MASTER STATUS;
+SQL
+BASH
+mysql: [Warning] Using a password on the command line interface can be insecure.
+File    Position        Binlog_Do_DB    Binlog_Ignore_DB        Executed_Gtid_Set
+mysql-1-bin.000004      12585
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ read -r -p "New primary File: " LOG_FILE
+read -r -p "New primary Position: " LOG_POS
+printf 'Using %s at %s\n' "$LOG_FILE" "$LOG_POS"
+New primary File: mysql-1-bin.000004
+New primary Position: 12585
+Using mysql-1-bin.000004 at 12585
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ 
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec -i mysql-2 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+STOP REPLICA;
+CHANGE REPLICATION SOURCE TO
+  SOURCE_HOST='mysql-1.mysql-h',
+  SOURCE_USER='repl',
+  SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
+  SOURCE_LOG_FILE='${LOG_FILE}',
+  SOURCE_LOG_POS=${LOG_POS},
+  SOURCE_CONNECT_RETRY=10,
+  GET_SOURCE_PUBLIC_KEY=1;
+START REPLICA;
+SQL
+BASH
+
+kubectl exec -i mysql-0 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
+mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+CHANGE REPLICATION SOURCE TO
+  SOURCE_HOST='mysql-1.mysql-h',
+  SOURCE_USER='repl',
+  SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
+  SOURCE_LOG_FILE='${LOG_FILE}',
+  SOURCE_LOG_POS=${LOG_POS},
+  SOURCE_CONNECT_RETRY=10,
+  GET_SOURCE_PUBLIC_KEY=1;
+START REPLICA;
+SQL
+BASH
+mysql: [Warning] Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-1.mysql-h
+        Relay_Source_Log_File: mysql-1-bin.000004
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 12585
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+                  Source_Host: mysql-1.mysql-h
+        Relay_Source_Log_File: mysql-1-bin.000004
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+          Exec_Source_Log_Pos: 12585
+        Seconds_Behind_Source: 0
+                Last_IO_Error: 
+               Last_SQL_Error: 
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ cat writer-ack.log
+kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+2026-11-24T17:01:04+00:00 pod=mysql-0 seq=6 student=101753267
+2026-11-24T17:01:05+00:00 pod=mysql-0 seq=7 student=101753267
+2026-11-24T17:01:07+00:00 pod=mysql-0 seq=8 student=101753267
+2026-11-24T17:01:08+00:00 pod=mysql-0 seq=9 student=101753267
+2026-11-24T17:01:09+00:00 pod=mysql-0 seq=10 student=101753267
+2026-11-24T17:01:10+00:00 pod=mysql-0 seq=11 student=101753267
+2026-11-24T17:01:11+00:00 pod=mysql-0 seq=12 student=101753267
+2026-11-24T17:01:12+00:00 pod=mysql-0 seq=13 student=101753267
+2026-11-24T17:01:13+00:00 pod=mysql-0 seq=14 student=101753267
+2026-11-24T17:01:15+00:00 pod=mysql-0 seq=15 student=101753267
+2026-11-24T17:01:16+00:00 pod=mysql-0 seq=16 student=101753267
+2026-11-24T17:01:17+00:00 pod=mysql-0 seq=17 student=101753267
+2026-11-24T17:01:18+00:00 pod=mysql-0 seq=18 student=101753267
+2026-11-24T17:01:19+00:00 pod=mysql-0 seq=19 student=101753267
+2026-11-24T17:01:20+00:00 pod=mysql-0 seq=20 student=101753267
+2026-11-24T17:01:22+00:00 pod=mysql-0 seq=21 student=101753267
+2026-11-24T17:01:23+00:00 pod=mysql-0 seq=22 student=101753267
+2026-11-24T17:01:24+00:00 pod=mysql-0 seq=23 student=101753267
+2026-11-24T17:01:25+00:00 pod=mysql-0 seq=24 student=101753267
+2026-11-24T17:01:26+00:00 pod=mysql-0 seq=25 student=101753267
+2026-11-24T17:01:27+00:00 pod=mysql-0 seq=26 student=101753267
+2026-11-24T17:01:29+00:00 pod=mysql-0 seq=27 student=101753267
+2026-11-24T17:01:30+00:00 pod=mysql-0 seq=28 student=101753267
+2026-11-24T17:01:31+00:00 pod=mysql-0 seq=29 student=101753267
+2026-11-24T17:01:32+00:00 pod=mysql-0 seq=30 student=101753267
+2026-11-24T17:01:33+00:00 pod=mysql-0 seq=31 student=101753267
+2026-11-24T17:01:34+00:00 pod=mysql-0 seq=32 student=101753267
+2026-11-24T17:01:35+00:00 pod=mysql-0 seq=33 student=101753267
+2026-11-24T17:01:37+00:00 pod=mysql-0 seq=34 student=101753267
+2026-11-24T17:01:38+00:00 pod=mysql-0 seq=35 student=101753267
+2026-11-24T17:01:39+00:00 pod=mysql-0 seq=36 student=101753267
+2026-11-24T17:01:40+00:00 pod=mysql-0 seq=37 student=101753267
+2026-11-24T17:01:41+00:00 pod=mysql-0 seq=38 student=101753267
+2026-11-24T17:01:42+00:00 pod=mysql-0 seq=39 student=101753267
+2026-11-24T17:01:43+00:00 pod=mysql-0 seq=40 student=101753267
+2026-11-24T17:01:45+00:00 pod=mysql-0 seq=41 student=101753267
+2026-11-24T17:01:46+00:00 pod=mysql-0 seq=42 student=101753267
+2026-11-24T17:01:47+00:00 pod=mysql-0 seq=43 student=101753267
+2026-11-24T17:01:48+00:00 pod=mysql-0 seq=44 student=101753267
+2026-11-24T17:01:49+00:00 pod=mysql-0 seq=45 student=101753267
+2026-11-24T17:01:50+00:00 pod=mysql-0 seq=46 student=101753267
+2026-11-24T17:01:51+00:00 pod=mysql-0 seq=47 student=101753267
+2026-11-24T17:01:53+00:00 pod=mysql-0 seq=48 student=101753267
+2026-11-24T17:01:54+00:00 pod=mysql-0 seq=49 student=101753267
+2026-11-24T17:01:55+00:00 pod=mysql-0 seq=50 student=101753267
+2026-11-24T17:01:56+00:00 pod=mysql-0 seq=51 student=101753267
+2026-11-24T17:01:57+00:00 pod=mysql-0 seq=52 student=101753267
+2026-11-24T17:01:59+00:00 pod=mysql-0 seq=53 student=101753267
+2026-11-24T17:02:00+00:00 pod=mysql-0 seq=54 student=101753267
+2026-11-24T17:02:01+00:00 pod=mysql-0 seq=55 student=101753267
+2026-11-24T17:02:02+00:00 pod=mysql-0 seq=56 student=101753267
+2026-11-24T17:02:03+00:00 pod=mysql-0 seq=57 student=101753267
+2026-11-24T17:02:04+00:00 pod=mysql-0 seq=58 student=101753267
+2026-11-24T17:02:05+00:00 pod=mysql-0 seq=59 student=101753267
+2026-11-24T17:02:07+00:00 pod=mysql-0 seq=60 student=101753267
+2026-11-24T17:02:08+00:00 pod=mysql-0 seq=61 student=101753267
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-----+------------+
+| seq | student_id |
++-----+------------+
+|   1 | 101753267  |
+|   2 | 101753267  |
+|   3 | 101753267  |
+|   4 | 101753267  |
+|   5 | 101753267  |
+|   6 | 101753267  |
+|   7 | 101753267  |
+|   8 | 101753267  |
+|   9 | 101753267  |
+|  10 | 101753267  |
+|  11 | 101753267  |
+|  12 | 101753267  |
+|  13 | 101753267  |
+|  14 | 101753267  |
+|  15 | 101753267  |
+|  16 | 101753267  |
+|  17 | 101753267  |
+|  18 | 101753267  |
+|  19 | 101753267  |
+|  20 | 101753267  |
+|  21 | 101753267  |
+|  22 | 101753267  |
+|  23 | 101753267  |
+|  24 | 101753267  |
+|  25 | 101753267  |
+|  26 | 101753267  |
+|  27 | 101753267  |
+|  28 | 101753267  |
+|  29 | 101753267  |
+|  30 | 101753267  |
+|  31 | 101753267  |
+|  32 | 101753267  |
+|  33 | 101753267  |
+|  34 | 101753267  |
+|  35 | 101753267  |
+|  36 | 101753267  |
+|  37 | 101753267  |
+|  38 | 101753267  |
+|  39 | 101753267  |
+|  40 | 101753267  |
+|  41 | 101753267  |
+|  42 | 101753267  |
+|  43 | 101753267  |
+|  44 | 101753267  |
+|  45 | 101753267  |
+|  46 | 101753267  |
+|  47 | 101753267  |
+|  48 | 101753267  |
+|  49 | 101753267  |
+|  50 | 101753267  |
+|  51 | 101753267  |
+|  52 | 101753267  |
+|  53 | 101753267  |
+|  54 | 101753267  |
+|  55 | 101753267  |
+|  56 | 101753267  |
+|  57 | 101753267  |
+|  58 | 101753267  |
+|  59 | 101753267  |
+|  60 | 101753267  |
+|  61 | 101753267  |
++-----+------------+
++----------+----------+
+| MAX(seq) | COUNT(*) |
++----------+----------+
+|       61 |       61 |
++----------+----------+
+
+=== Terminal A - writes on new primary ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ ./writer.sh mysql-1 2>&1 | grep -vF 'mysql: [Warning] Using a password on the command line interface can be insecure.'
+Writing to mysql-1. Press Ctrl+C to stop.
+2026-11-24T17:03:56+00:00 pod=mysql-1 seq=62 student=101753267
+2026-11-24T17:03:57+00:00 pod=mysql-1 seq=63 student=101753267
+2026-11-24T17:03:58+00:00 pod=mysql-1 seq=64 student=101753267
+2026-11-24T17:03:59+00:00 pod=mysql-1 seq=65 student=101753267
+2026-11-24T17:04:01+00:00 pod=mysql-1 seq=66 student=101753267
+2026-11-24T17:04:02+00:00 pod=mysql-1 seq=67 student=101753267
+2026-11-24T17:04:03+00:00 pod=mysql-1 seq=68 student=101753267
+2026-11-24T17:04:04+00:00 pod=mysql-1 seq=69 student=101753267
+2026-11-24T17:04:05+00:00 pod=mysql-1 seq=70 student=101753267
+^C
+
+=== Terminal B - recovery confirmation ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ tail -n 1 writer-ack.log
+echo "Failover confirmed in $((SECONDS - FAILOVER_START)) seconds."
+2026-11-24T17:04:05+00:00 pod=mysql-1 seq=70 student=101753267
+Failover confirmed in 124 seconds.
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$
+
+=== Terminal B - Final data check ===
+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$ kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+mysql: [Warning] Using a password on the command line interface can be insecure.
++-----+------------+
+| seq | student_id |
++-----+------------+
+|   1 | 101753267  |
+|   2 | 101753267  |
+|   3 | 101753267  |
+|   4 | 101753267  |
+|   5 | 101753267  |
+|   6 | 101753267  |
+|   7 | 101753267  |
+|   8 | 101753267  |
+|   9 | 101753267  |
+|  10 | 101753267  |
+|  11 | 101753267  |
+|  12 | 101753267  |
+|  13 | 101753267  |
+|  14 | 101753267  |
+|  15 | 101753267  |
+|  16 | 101753267  |
+|  17 | 101753267  |
+|  18 | 101753267  |
+|  19 | 101753267  |
+|  20 | 101753267  |
+|  21 | 101753267  |
+|  22 | 101753267  |
+|  23 | 101753267  |
+|  24 | 101753267  |
+|  25 | 101753267  |
+|  26 | 101753267  |
+|  27 | 101753267  |
+|  28 | 101753267  |
+|  29 | 101753267  |
+|  30 | 101753267  |
+|  31 | 101753267  |
+|  32 | 101753267  |
+|  33 | 101753267  |
+|  34 | 101753267  |
+|  35 | 101753267  |
+|  36 | 101753267  |
+|  37 | 101753267  |
+|  38 | 101753267  |
+|  39 | 101753267  |
+|  40 | 101753267  |
+|  41 | 101753267  |
+|  42 | 101753267  |
+|  43 | 101753267  |
+|  44 | 101753267  |
+|  45 | 101753267  |
+|  46 | 101753267  |
+|  47 | 101753267  |
+|  48 | 101753267  |
+|  49 | 101753267  |
+|  50 | 101753267  |
+|  51 | 101753267  |
+|  52 | 101753267  |
+|  53 | 101753267  |
+|  54 | 101753267  |
+|  55 | 101753267  |
+|  56 | 101753267  |
+|  57 | 101753267  |
+|  58 | 101753267  |
+|  59 | 101753267  |
+|  60 | 101753267  |
+|  61 | 101753267  |
+|  62 | 101753267  |
+|  63 | 101753267  |
+|  64 | 101753267  |
+|  65 | 101753267  |
+|  66 | 101753267  |
+|  67 | 101753267  |
+|  68 | 101753267  |
+|  69 | 101753267  |
+|  70 | 101753267  |
++-----+------------+
++----------+----------+
+| MAX(seq) | COUNT(*) |
++----------+----------+
+|       70 |       70 |
++----------+----------+
+ubuntu@ip-172-31-13-129:~/CLO835-Final-Project$
