@@ -5,8 +5,8 @@ Run in the EC2 project folder. Terminal A: Writer. Terminal B: other commands.
 ## 1. Check replication
 
 ```bash
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
-kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
+kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 
 Healthy: Replica_IO_Running and Replica_SQL_Running are Yes; Seconds_Behind_Source returns to 0; Last_IO_Error and Last_SQL_Error are empty.
@@ -16,7 +16,7 @@ Healthy: Replica_IO_Running and Replica_SQL_Running are Yes; Seconds_Behind_Sour
 Terminal A:
 
 ```bash
-./writer.sh mysql-0
+./writer.sh mysql-0 2>&1 | grep -vF 'mysql: [Warning] Using a password on the command line interface can be insecure.'
 ```
 
 Leave it running. Ctrl+C stops it. Terminal B:
@@ -42,7 +42,7 @@ kubectl delete pod mysql-1 -n mysql-101753267
 kubectl wait --for=condition=Ready pod/mysql-1 -n mysql-101753267 --timeout=180s
 kubectl get pod mysql-1 -n mysql-101753267 -o wide
 kubectl get pvc data-mysql-1 -n mysql-101753267
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
+kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 Expect the same PVC/PV and healthy replication. To confirm catch-up, pause Writer and compare the mysql-0 and mysql-1 counts using the query in section 2. Restart Writer before a primary-failure rehearsal. For a mysql-2 failure, use mysql-2 and data-mysql-2.
 
@@ -90,10 +90,18 @@ SQL
 BASH
 ```
 
-Replace <FILE> and <POSITION> in BOTH blocks below with that output. First repoint mysql-2, then mysql-0:
+In terminal B, enter the NEW File and Position shown above once. Keep Writer stopped and use the same terminal for both commands below:
 
 ```bash
-kubectl exec -i mysql-2 -n mysql-101753267 -c mysql -- bash <<'BASH'
+read -r -p "New primary File: " LOG_FILE
+read -r -p "New primary Position: " LOG_POS
+printf 'Using %s at %s\n' "$LOG_FILE" "$LOG_POS"
+```
+
+First repoint mysql-2, then mysql-0:
+
+```bash
+kubectl exec -i mysql-2 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 STOP REPLICA;
 RESET REPLICA ALL;
@@ -101,22 +109,22 @@ CHANGE REPLICATION SOURCE TO
   SOURCE_HOST='mysql-1.mysql-h',
   SOURCE_USER='repl',
   SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
-  SOURCE_LOG_FILE='<FILE>',
-  SOURCE_LOG_POS=<POSITION>,
+  SOURCE_LOG_FILE='${LOG_FILE}',
+  SOURCE_LOG_POS=${LOG_POS},
   SOURCE_CONNECT_RETRY=10,
   GET_SOURCE_PUBLIC_KEY=1;
 START REPLICA;
 SQL
 BASH
 
-kubectl exec -i mysql-0 -n mysql-101753267 -c mysql -- bash <<'BASH'
+kubectl exec -i mysql-0 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 CHANGE REPLICATION SOURCE TO
   SOURCE_HOST='mysql-1.mysql-h',
   SOURCE_USER='repl',
   SOURCE_PASSWORD='${REPLICATION_PASSWORD}',
-  SOURCE_LOG_FILE='<FILE>',
-  SOURCE_LOG_POS=<POSITION>,
+  SOURCE_LOG_FILE='${LOG_FILE}',
+  SOURCE_LOG_POS=${LOG_POS},
   SOURCE_CONNECT_RETRY=10,
   GET_SOURCE_PUBLIC_KEY=1;
 START REPLICA;
@@ -127,8 +135,8 @@ BASH
 Check both; expect source mysql-1.mysql-h, both threads Yes, lag 0, no errors:
 
 ```bash
-kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
-kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"'
+kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 
 ## 5. Verify data and resume writes
@@ -145,7 +153,7 @@ Compare the last confirmed ID with MAX(seq) and COUNT(*), including the five see
 After verification, terminal A:
 
 ```bash
-./writer.sh mysql-1
+./writer.sh mysql-1 2>&1 | grep -vF 'mysql: [Warning] Using a password on the command line interface can be insecure.'
 ```
 
 After its first successful write, terminal B:
@@ -162,10 +170,10 @@ Recovery must take no more than 10 minutes from the kill to a successful new-pri
 Stop Writer and save the previous evidence. If its log exists, archive it:
 
 ```bash
-mv writer-ack.log "writer-$(date +%Y%m%d-%H%M%S).log"
+mv writer-ack.log "writer-ack-1.log"
 ```
 
-Delete the cluster and ALL database data, then rebuild. Bootstrap prints its start and finish times:
+Delete the cluster and ALL database data, then rebuild. Bootstrap prints its elapsed time:
 
 ```bash
 kind delete cluster --name kind
