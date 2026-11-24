@@ -35,7 +35,7 @@ data:
     fi
 
     # Skip the clone on primary (ordinal index 0), following the tutorial
-    if [[ $(hostname) =~ -([0-9]+)$ ]]; then
+    if [[ $HOSTNAME =~ -([0-9]+)$ ]]; then
       ordinal=${BASH_REMATCH[1]}
     else
       exit 1

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Show the start time.
-echo "Bootstrap started: $(date -Is)"
+echo "Bootstrap starting..."
 
 # Project variables
 STUDENT_ID="101753267"
@@ -115,4 +115,4 @@ done
 kubectl exec mysql-2 -n "$NAMESPACE" -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id, created_at FROM clo835.students ORDER BY seq;"'
 
 # Show the complete time.
-echo "Bootstrap finished: $(date -Is)"
+echo "Bootstrap completed in $SECONDS seconds."

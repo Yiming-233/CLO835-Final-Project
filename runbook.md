@@ -51,7 +51,7 @@ Expect the same PVC/PV and healthy replication. To confirm catch-up, pause Write
 Record the kill time. Delete mysql-0 only for rehearsal; if the instructor already deleted it, do not delete it again. 
 
 ```bash
-date -Is
+FAILOVER_START=$SECONDS
 kubectl delete pod mysql-0 -n mysql-101753267 --wait=false
 ```
 
@@ -152,7 +152,7 @@ After its first successful write, terminal B:
 
 ```bash
 tail -n 1 writer-ack.log
-date -Is
+echo "Failover confirmed in $((SECONDS - FAILOVER_START)) seconds."
 ```
 
 Recovery must take no more than 10 minutes from the kill to a successful new-primary write. Stop Writer, then repeat the data check above to include resumed writes in the evidence.
