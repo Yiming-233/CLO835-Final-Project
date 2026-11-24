@@ -1,5 +1,5 @@
 ########################################################
-# Tasks 3 and 7 - MySQL Configuration and Init Script
+# Tasks 4 and 7 - MySQL Configuration and Replication Scripts
 # Adapted from the Kubernetes replicated MySQL tutorial
 ########################################################
 apiVersion: v1
@@ -8,86 +8,79 @@ metadata:
   name: mysql-config
   namespace: ${NAMESPACE}
 data:
+  # CNF files are MySQL settings; scripts below are Bash with embedded SQL.
+  # Only the initial role is chosen here; promotion is manual in runbook.md.
   primary.cnf: |
     [mysqld]
-    log-bin=mysql-bin
+    # Record changes in binary logs so replicas can request them.
+    log-bin
 
   replica.cnf: |
     [mysqld]
-    log-bin=mysql-bin
-    read-only=ON
-
-  init-config.sh: |
-    #!/bin/bash
-    set -eu
-
-    # Generate server-id from the Pod ordinal
-    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
-    ordinal=${BASH_REMATCH[1]}
-
-    echo "[mysqld]" > /mnt/conf.d/server-id.cnf
-    echo "server-id=$((100 + $ordinal))" >> /mnt/conf.d/server-id.cnf
-
-    # Copy the configuration for the initial Pod role
-    if [[ $ordinal -eq 0 ]]; then
-      cp /mnt/config-map/primary.cnf /mnt/conf.d/
-    else
-      cp /mnt/config-map/replica.cnf /mnt/conf.d/
-    fi
-  
-  primary.sh: |
-    #!/bin/bash
-    set -eu
-
-    # Create the replication account only on the initial primary
-    if [[ "$HOSTNAME" == "mysql-0" ]]; then
-      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
-    CREATE DATABASE IF NOT EXISTS clo835;
-    CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';
-    GRANT REPLICATION SLAVE, REPLICATION CLIENT, RELOAD ON *.* TO 'repl'@'%';
-    GRANT SELECT, SHOW VIEW, TRIGGER ON clo835.* TO 'repl'@'%';
-    SQL
-    fi
-  
+    # Record changes in binary logs so replicas can request them.
+    log-bin
+    # Ordinary clients cannot write; root still can for database initialization.
+    read-only
+ 
   clone.sh: |
     #!/bin/bash
     set -eu
 
-    # Prepare the file for the later import step
+    # Prepare the SQL file for mounting
     touch /clone/clone.sql
 
-    # Skip cloning if database files already exist
-    [[ -d /var/lib/mysql/mysql ]] && exit 0
+    # Skip the clone if data already exists, following the tutorial
+    if [[ -d /var/lib/mysql/mysql ]]; then
+      exit 0
+    fi
 
-    # Skip cloning on the primary
-    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
-    ordinal=${BASH_REMATCH[1]}
-    [[ $ordinal -eq 0 ]] && exit 0
+    # Skip the clone on primary (ordinal index 0), following the tutorial
+    if [[ $(hostname) =~ -([0-9]+)$ ]]; then
+      ordinal=${BASH_REMATCH[1]}
+    else
+      exit 1
+    fi
 
-    # Wait for the primary, following the tutorial loop structure
+    if [[ $ordinal -eq 0 ]]; then
+      exit 0
+    fi
+
+    # Wait until the primary accepts connections
     until mysql --connect-timeout=2 \
       -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
       -e "SELECT 1" >/dev/null; do
       sleep 2
     done
 
-    # Dump the project database and its replication coordinates
-    mysqldump \
-      -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
-      --single-transaction \
-      --source-data=2 \
-      --no-tablespaces \
+    # Save the database and replication position
+    mysqldump -h mysql-0.mysql-h -urepl -p"$REPLICATION_PASSWORD" \
+      --single-transaction --source-data=2 --no-tablespaces \
       --databases clo835 > /clone/clone.sql
+
+    # Project adaptation: normalize the dump's replication statement
+    sed -i 's/^-- CHANGE MASTER TO /-- CHANGE REPLICATION SOURCE TO /' /clone/clone.sql
+    sed -i 's/MASTER_LOG_FILE/SOURCE_LOG_FILE/g' /clone/clone.sql
+    sed -i 's/MASTER_LOG_POS/SOURCE_LOG_POS/g' /clone/clone.sql
 
   replica.sh: |
     #!/bin/bash
     set -eu
 
-    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
-    ordinal=${BASH_REMATCH[1]}
+    # Extract the Pod ordinal, following the tutorial
+    if [[ $HOSTNAME =~ -([0-9]+)$ ]]; then
+      ordinal=${BASH_REMATCH[1]}
+    else
+      echo "Unexpected Pod hostname: $HOSTNAME" >&2
+      exit 1
+    fi
 
-    # Skip setup on the primary or an already configured replica
-    if [[ $ordinal -eq 0 || -f /var/lib/mysql/.replication-configured ]]; then
+    # Skip replication setup on the initial primary (ordinal index 0)
+    if [[ $ordinal -eq 0 ]]; then
+      exec sleep infinity
+    fi
+
+    # Keep saved replication settings when the Pod restarts.
+    if [[ -f /var/lib/mysql/.replication-configured ]]; then
       exec sleep infinity
     fi
 
@@ -98,17 +91,18 @@ data:
       sleep 2
     done
 
-    # Extract the binary log file and position recorded by mysqldump
-    coordinates=$(sed -n -E \
-      's/^-- CHANGE (REPLICATION SOURCE|MASTER) TO (.*);$/\2/p' \
-      /clone/clone.sql |
-      sed 's/MASTER_LOG_FILE/SOURCE_LOG_FILE/g; s/MASTER_LOG_POS/SOURCE_LOG_POS/g')
+    # Extract the coordinates and remove the ending semicolon
+    coordinates=$(sed -n 's/^-- CHANGE REPLICATION SOURCE TO //p' /clone/clone.sql |
+      sed 's/;$//')
 
+    # Check if the coordinate is empty or not
     if [[ -z "$coordinates" ]]; then
       echo "Replication coordinates are missing from the dump." >&2
       exit 1
     fi
 
+    # Start from the dump snapshot position, not the source's current position.
+    # GET_SOURCE_PUBLIC_KEY supports the MySQL 8 password authentication method.
     mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
     CHANGE REPLICATION SOURCE TO
       ${coordinates},
@@ -121,5 +115,6 @@ data:
     SQL
 
     # Persist the setup marker on the database PVC
+    # sleep infinity keeps this regular helper alive without redoing setup.
     touch /var/lib/mysql/.replication-configured
     exec sleep infinity

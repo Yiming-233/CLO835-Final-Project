@@ -4,36 +4,43 @@
 # Prerequisite for Task 10 - Bootstrap Deployment
 # Executed by Terraform through EC2 user_data as root
 ########################################################
-
-set -euo pipefail
+set -euxo pipefail
+# Avoid interactive package-install questions in EC2 user_data.
 export DEBIAN_FRONTEND=noninteractive
 
 ########################################################
 # Install Docker and supporting tools
 ########################################################
 apt-get update -y
-apt-get install -y docker.io curl ca-certificates git openssl
+apt-get install -y docker.io curl ca-certificates git openssl gpg
 
+# Start Docker now and at future boots.
 systemctl enable --now docker
+# Allow ubuntu to use Docker after a new login.
 usermod -aG docker ubuntu
 
 ########################################################
 # Install kind
 ########################################################
-curl -fL --retry 3 \
-  https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 \
-  -o /tmp/kind
-
-install -m 0755 /tmp/kind /usr/local/bin/kind
+# For AMD64 / x86_64
+[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+# For ARM64
+[ $(uname -m) = aarch64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-arm64
+chmod +x ./kind
+mv ./kind /usr/local/bin/kind
 
 ########################################################
 # Install kubectl
 ########################################################
-curl -fL --retry 3 \
-  https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl \
-  -o /tmp/kubectl
-
-install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+# Install kubectl from the Kubernetes v1.35 package repository.
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key \
+  | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /" \
+  >/etc/apt/sources.list.d/kubernetes.list
+apt-get update -y
+apt-get install -y kubectl
+apt-mark hold kubectl
 
 ########################################################
 # Check installed tools
@@ -41,15 +48,4 @@ install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
 docker --version
 kind version
 kubectl version --client
-
-########################################################
-# Login message
-########################################################
-cat > /etc/motd <<'MOTD'
-
-CLO835 Final Project - EC2 Host
-Docker, kind and kubectl installation is handled by cloud-init.
-Before deployment, check: sudo cloud-init status --wait
-Run the project bootstrap.sh as the ubuntu user.
-
-MOTD
+echo "Prerequisites installed."

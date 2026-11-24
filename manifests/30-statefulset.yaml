@@ -10,23 +10,49 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   selector:
-    matchLabels: {app: mysql}
+    matchLabels: 
+      app: mysql
+      app.kubernetes.io/name: mysql
   serviceName: mysql-h
   replicas: 3
   template:
     metadata:
-      labels: {app: mysql}
+      labels:
+        app: mysql
+        app.kubernetes.io/name: mysql
     spec:
+      # Init containers finish in order before regular containers start.
       initContainers:
+      # Tutorial pattern: derive server-id and copy the initial role config.
       - name: init-mysql
         image: mysql:8.0
-        command: ["bash", "/mnt/config-map/init-config.sh"]
+        command:
+        - bash
+        - "-c"
+        - |
+          set -eu
+
+          # Generate mysql server-id from pod ordinal index.
+          [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+          ordinal=${BASH_REMATCH[1]}
+          echo "[mysqld]" > /mnt/conf.d/server-id.cnf
+
+          # Add an offset to avoid reserved server-id=0 value.
+          echo "server-id=$((100 + $ordinal))" >> /mnt/conf.d/server-id.cnf
+
+          # Copy appropriate conf.d files from config-map to emptyDir.
+          if [[ $ordinal -eq 0 ]]; then
+            cp /mnt/config-map/primary.cnf /mnt/conf.d/
+          else
+            cp /mnt/config-map/replica.cnf /mnt/conf.d/
+          fi
         volumeMounts:
         - name: conf
           mountPath: /mnt/conf.d
         - name: config-map
           mountPath: /mnt/config-map
           
+      # Project adaptation: prepare a SQL dump instead of XtraBackup files.
       - name: clone-mysql
         image: mysql:8.0
         command: ["bash", "/mnt/config-map/clone.sh"]
@@ -37,9 +63,13 @@ spec:
               name: ${SECRET_NAME}
               key: replication-password
         volumeMounts:
-        - {name: config-map, mountPath: /mnt/config-map}
-        - {name: data, mountPath: /var/lib/mysql, readOnly: true}
-        - {name: clone, mountPath: /clone}
+        - name: config-map
+          mountPath: /mnt/config-map
+        # Only inspect existing data here; the main container imports the dump.
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: clone
+          mountPath: /clone
 
       containers:
       - name: mysql
@@ -63,22 +93,19 @@ spec:
           mountPath: /var/lib/mysql
         - name: conf
           mountPath: /etc/mysql/conf.d
-        - name: config-map
-          mountPath: /docker-entrypoint-initdb.d/primary.sh
-          subPath: primary.sh
         - name: clone
           mountPath: /docker-entrypoint-initdb.d/10-clone.sql
           subPath: clone.sql
+        # TCP SELECT confirms the regular server is ready (tutorial pattern).
+        # It does not by itself verify replication health.
         readinessProbe:
           exec:
-            command:
-            - bash
-            - -c
-            - mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"
+            command: ["bash", "-c", 'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"']
           initialDelaySeconds: 5
           periodSeconds: 2
           timeoutSeconds: 3
 
+      # Regular helper: wait for MySQL, configure replication, then stay alive.
       - name: replication
         image: mysql:8.0
         command: ["bash", "/mnt/config-map/replica.sh"]
@@ -94,25 +121,27 @@ spec:
               name: ${SECRET_NAME}
               key: replication-password
         volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
         - name: config-map
           mountPath: /mnt/config-map
         - name: clone
           mountPath: /clone
-          readOnly: true
-        - name: data
-          mountPath: /var/lib/mysql
       volumes:
+      - name: conf
+        emptyDir: {}
       - name: config-map
         configMap:
           name: mysql-config
-      - name: conf
-        emptyDir: {}
       - name: clone
         emptyDir: {}
+  # Week10 pattern: data-mysql-0/1/2 PVCs survive deletion of their Pods.
   volumeClaimTemplates:
   - metadata:
       name: data
     spec:
       accessModes: [ReadWriteOnce]
       storageClassName: standard
-      resources: {requests: {storage: 1Gi}}
+      resources: 
+        requests: 
+          storage: 1Gi

@@ -6,20 +6,36 @@ kind: Service
 metadata:
   name: mysql-h
   namespace: ${NAMESPACE}
+   # Labels identify this Service; the selector below selects Pods.
+  labels:
+    app: mysql
+    app.kubernetes.io/name: mysql
 spec:
   ports:
   - name: mysql
+    # targetPort is omitted because it defaults to the same number.
     port: 3306
+  # Headless DNS gives each Pod an address such as mysql-0.mysql-h.
   clusterIP: None
-  selector: {app: mysql}
+  selector: 
+    app: mysql
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  # Default ClusterIP Service: sends traffic to any matching Ready Pod.
+  # It does not enforce SQL read-only access; do not use it for Writer.
   name: mysql-read
   namespace: ${NAMESPACE}
+  # Labels identify this Service; the selector below selects Pods.
+  labels:
+    app: mysql
+    app.kubernetes.io/name: mysql
+    readonly: "true"
 spec:
   ports:
   - name: mysql
+    # targetPort is omitted because it defaults to the same number.
     port: 3306
-  selector: {app: mysql}
+  selector: 
+    app: mysql

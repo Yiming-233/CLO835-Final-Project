@@ -3,8 +3,7 @@ provider "aws" {
 }
 
 # Latest Ubuntu 26.04 LTS (Resolute Raccoon), x86_64, from Canonical.
-# 26.04 on purpose: the Dockerfile of the app starts with FROM ubuntu:26.04,
-# so every manual command below matches one Dockerfile line. Ships Python 3.14.
+# Ubuntu EC2 host for Docker, kind and kubectl.
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -127,5 +126,5 @@ output "private_ip" {
 }
 
 output "next_step" {
-  value = "ssh -i <your-key.pem> ubuntu@${aws_instance.vm.public_ip}   # then follow runAWS_EC2.sh"
+  value = "ssh -i <your-key.pem> ubuntu@${aws_instance.vm.public_ip}"
 }

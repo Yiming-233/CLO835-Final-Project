@@ -11,6 +11,10 @@ On the EC2 host, prepare Docker, kind, kubectl and OpenSSL. From a fresh project
 ```bash
 git clone https://github.com/Yiming-233/CLO835-Final-Project.git
 cd CLO835-Final-Project
+```
+
+Run the bootstrap:
+```bash
 ./bootstrap.sh
 ```
 
@@ -20,8 +24,11 @@ See [runbook.md](runbook.md) for detailed commands and recovery procedures.
 
 ## Sources
 
-- CLO835 Week07, Week10, Week12 and Week14 labs
+- CLO835 Week02, Week07, Week10, Week12 and Week14 labs
 - Assignment 1
+- [kind installation](https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries)
+- [MySQL mysqldump](https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html)
+- [MySQL replication setup](https://dev.mysql.com/doc/refman/8.0/en/change-replication-source-to.html)
 - [Kubernetes replicated MySQL tutorial](https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/)
 
 The tutorial was adapted to use MySQL 8.0 and mysqldump instead of MySQL 5.7 and XtraBackup.
