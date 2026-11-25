@@ -95,8 +95,8 @@ BASH
 In terminal B, enter the new File and Position once. Keep Writer stopped and use this terminal for the following commands:
 
 ```bash
-read -r -p "New primary File: " LOG_FILE
-read -r -p "New primary Position: " LOG_POS
+read -p "New primary File: " LOG_FILE
+read -p "New primary Position: " LOG_POS
 printf 'Using %s at %s\n' "$LOG_FILE" "$LOG_POS"
 ```
 
