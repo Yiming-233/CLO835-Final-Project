@@ -7,8 +7,8 @@ Run all commands in the EC2 project folder. Use terminal A for Writer and termin
 In terminal B, check both replicas:
 
 ```bash
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
-kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 
 Healthy replication has both threads Yes, lag returning to 0, and empty Last_IO_Error and Last_SQL_Error fields.
@@ -25,7 +25,7 @@ Leave Writer running; Ctrl+C stops it. In terminal B, check the last confirmed I
 
 ```bash
 tail -n 1 writer-ack.log
-kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+kubectl exec mysql-0 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
 ```
 
 ## 3. Replica failure
@@ -33,18 +33,18 @@ kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQ
 In terminal B, record mysql-1's Pod IP, age and PVC/PV before deletion:
 
 ```bash
-kubectl get pod mysql-1 -n mysql-101753267 -o wide
-kubectl get pvc data-mysql-1 -n mysql-101753267
+kubectl get pod mysql-1 -n mysql-<studentID> -o wide
+kubectl get pvc data-mysql-1 -n mysql-<studentID>
 ```
 
 Delete only the Pod, wait for recovery, then check its storage and replication:
 
 ```bash
-kubectl delete pod mysql-1 -n mysql-101753267
-kubectl wait --for=condition=Ready pod/mysql-1 -n mysql-101753267 --timeout=180s
-kubectl get pod mysql-1 -n mysql-101753267 -o wide
-kubectl get pvc data-mysql-1 -n mysql-101753267
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl delete pod mysql-1 -n mysql-<studentID>
+kubectl wait --for=condition=Ready pod/mysql-1 -n mysql-<studentID> --timeout=180s
+kubectl get pod mysql-1 -n mysql-<studentID> -o wide
+kubectl get pvc data-mysql-1 -n mysql-<studentID>
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 The StatefulSet recreates the Pod using the same PVC/PV. Expect healthy replication. Pause Writer and compare mysql-0 and mysql-1 using the query in section 2 to confirm catch-up. Restart Writer before section 4. To test mysql-2, use mysql-2 and data-mysql-2.
 
@@ -54,36 +54,36 @@ In terminal B, start the timer and delete mysql-0:
 
 ```bash
 FAILOVER_START=$SECONDS
-kubectl delete pod mysql-0 -n mysql-101753267
+kubectl delete pod mysql-0 -n mysql-<studentID>
 ```
 
 Stop Writer in terminal A if it has not exited. Keep it stopped until section 5. In terminal B, wait for mysql-0 and make it read-only:
 
 ```bash
 tail -n 1 writer-ack.log
-kubectl wait --for=condition=Ready pod/mysql-0 -n mysql-101753267 --timeout=180s
-kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SET PERSIST super_read_only=ON; SELECT @@read_only, @@super_read_only; SHOW MASTER STATUS;"'
+kubectl wait --for=condition=Ready pod/mysql-0 -n mysql-<studentID> --timeout=180s
+kubectl exec mysql-0 -n mysql-<studentID> -c mysql -- sh -c 'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SET PERSIST super_read_only=ON; SELECT @@read_only, @@super_read_only; SHOW MASTER STATUS;"'
 ```
 
 Both read-only values must be 1. This procedure requires mysql-0 to recover using its existing PVC. Compare both replicas before promotion:
 
 ```bash
 tail -n 1 writer-ack.log
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
-kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT MAX(seq), COUNT(*) FROM clo835.students; SHOW REPLICA STATUS\G"' | grep -E '^MAX|^[0-9]|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Last_IO_Error:|Last_SQL_Error:'
 ```
 Both replicas must match mysql-0's File/Position, with both threads Yes and no errors. Compare MAX(seq) and COUNT(*). Keep Writer stopped; verify every acknowledged ID in section 5 before resuming writes.
 
 Promote mysql-1 and expect read-only values 0 / 0. If choosing mysql-2, swap mysql-1 and mysql-2 in the remaining commands and Writer target:
 
 ```bash
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "STOP REPLICA; RESET REPLICA ALL; SET PERSIST super_read_only=OFF; SET PERSIST read_only=OFF; SELECT @@read_only, @@super_read_only;"'
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "STOP REPLICA; RESET REPLICA ALL; SET PERSIST super_read_only=OFF; SET PERSIST read_only=OFF; SELECT @@read_only, @@super_read_only;"'
 ```
 
 Create the replication account on mysql-1 and read its new File and Position:
 
 ```bash
-kubectl exec -i mysql-1 -n mysql-101753267 -c mysql -- bash <<'BASH'
+kubectl exec -i mysql-1 -n mysql-<studentID> -c mysql -- bash <<'BASH'
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 CREATE USER 'repl'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';
 GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
@@ -103,7 +103,7 @@ printf 'Using %s at %s\n' "$LOG_FILE" "$LOG_POS"
 Point mysql-2 and then mysql-0 to the new primary:
 
 ```bash
-kubectl exec -i mysql-2 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
+kubectl exec -i mysql-2 -n mysql-<studentID> -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 STOP REPLICA;
 CHANGE REPLICATION SOURCE TO
@@ -118,7 +118,7 @@ START REPLICA;
 SQL
 BASH
 
-kubectl exec -i mysql-0 -n mysql-101753267 -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
+kubectl exec -i mysql-0 -n mysql-<studentID> -c mysql -- env LOG_FILE="$LOG_FILE" LOG_POS="$LOG_POS" bash <<'BASH'
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 CHANGE REPLICATION SOURCE TO
   SOURCE_HOST='mysql-1.mysql-h',
@@ -135,9 +135,9 @@ BASH
 
 Check both replicas. Expect source mysql-1.mysql-h, both threads Yes, lag 0 and empty error fields:
 
-```bash
-kubectl exec mysql-0 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
-kubectl exec mysql-2 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+```bash5
+kubectl exec mysql-0 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
+kubectl exec mysql-2 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G"' | grep -E 'Source_Host:|Relay_Source_Log_File:|Exec_Source_Log_Pos:|Replica_IO_Running:|Replica_SQL_Running:|Seconds_Behind_Source:|Last_IO_Error:|Last_SQL_Error:'
 ```
 
 ## 5. Verify data and resume writes
@@ -146,7 +146,7 @@ With Writer stopped, compare its confirmed IDs and student IDs with the new prim
 
 ```bash
 cat writer-ack.log
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
 ```
 
 Compare the last confirmed ID with MAX(seq) and COUNT(*), including the five seed rows. Verify every acknowledged ID; matching MAX alone is insufficient. Unused AUTO_INCREMENT IDs and committed writes without a client reply may explain gaps.
@@ -170,7 +170,7 @@ Stop Writer with Ctrl+C in terminal A. In terminal B, verify the new writes:
 
 ```bash
 cat writer-ack.log
-kubectl exec mysql-1 -n mysql-101753267 -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
+kubectl exec mysql-1 -n mysql-<studentID> -c mysql -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --table -e "SELECT seq, student_id FROM clo835.students ORDER BY seq; SELECT MAX(seq), COUNT(*) FROM clo835.students;"'
 ```
 
 Check that every confirmed ID and student ID appears in the table. Save the commands and output.
